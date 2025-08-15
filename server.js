@@ -48,7 +48,7 @@ app.get("/api/notices", async (req, res) => {
         });
 
         // Get saved notices from storage
-        const savedNotices = noticeStorage.getAllNotices();
+        const savedNotices = await noticeStorage.getAllNotices();
 
         // Find new notices
         const newNotices = findNewNotices(currentNotices, savedNotices);
@@ -59,8 +59,8 @@ app.get("/api/notices", async (req, res) => {
         }
 
         // Get updated stats from storage
-        const savedCount = noticeStorage.getNoticeCount();
-        const lastUpdate = noticeStorage.getLastUpdateTime();
+        const savedCount = await noticeStorage.getNoticeCount();
+        const lastUpdate = await noticeStorage.getLastUpdateTime();
 
         // Prepare response
         const response = {
@@ -87,8 +87,8 @@ app.get("/api/notices", async (req, res) => {
 // Get all saved notices
 app.get("/api/notices/all", async (req, res) => {
     try {
-        const savedNotices = noticeStorage.getAllNotices();
-        const lastUpdate = noticeStorage.getLastUpdateTime();
+        const savedNotices = await noticeStorage.getAllNotices();
+        const lastUpdate = await noticeStorage.getLastUpdateTime();
 
         res.json({
             status: "success",
@@ -119,7 +119,7 @@ app.post("/api/notices/reset", async (req, res) => {
 // Storage stats endpoint
 app.get("/api/stats", async (req, res) => {
     try {
-        const storageInfo = noticeStorage.getStorageInfo();
+        const storageInfo = await noticeStorage.getStorageInfo();
 
         res.json({
             status: "success",
@@ -150,10 +150,10 @@ app.post("/api/backup", async (req, res) => {
 });
 
 // Health check endpoint
-app.get("/api/health", (req, res) => {
+app.get("/api/health", async (req, res) => {
     try {
-        const count = noticeStorage.getNoticeCount();
-        const storageInfo = noticeStorage.getStorageInfo();
+        const count = await noticeStorage.getNoticeCount();
+        const storageInfo = await noticeStorage.getStorageInfo();
 
         res.json({
             status: "success",

@@ -10,6 +10,7 @@ class NoticeStorage {
             lastUpdate: null,
             version: '1.0.0'
         };
+        this.initialized = false;
         this.init();
     }
 
@@ -17,13 +18,27 @@ class NoticeStorage {
         try {
             // Try to load existing data
             const fileContent = await fs.readFile(this.dataFile, 'utf8');
-            this.data = JSON.parse(fileContent);
+            const loadedData = JSON.parse(fileContent);
+
+            // Ensure notices array exists
+            this.data = {
+                notices: loadedData.notices || [],
+                lastUpdate: loadedData.lastUpdate || null,
+                version: loadedData.version || '1.0.0'
+            };
+
             console.log('✅ Storage loaded successfully!');
         } catch (error) {
             // If file doesn't exist or is invalid, start with empty data
             console.log('📝 Creating new storage file...');
+            this.data = {
+                notices: [],
+                lastUpdate: null,
+                version: '1.0.0'
+            };
             await this.saveData();
         }
+        this.initialized = true;
     }
 
     async saveData() {
@@ -34,23 +49,33 @@ class NoticeStorage {
         }
     }
 
+    // Wait for initialization
+    async waitForInit() {
+        while (!this.initialized) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+    }
+
     // Get all saved notices
-    getAllNotices() {
+    async getAllNotices() {
+        await this.waitForInit();
         return this.data.notices || [];
     }
 
     // Check if a notice exists
-    noticeExists(title, link) {
-        return this.data.notices.some(notice =>
+    async noticeExists(title, link) {
+        await this.waitForInit();
+        return (this.data.notices || []).some(notice =>
             notice.title === title && notice.link === link
         );
     }
 
     // Add a new notice
     async addNotice(notice) {
-        if (!this.noticeExists(notice.title, notice.link)) {
+        await this.waitForInit();
+        if (!(await this.noticeExists(notice.title, notice.link))) {
             const newNotice = {
-                id: this.data.notices.length + 1,
+                id: (this.data.notices || []).length + 1,
                 ...notice,
                 created_at: new Date().toISOString()
             };
@@ -64,11 +89,12 @@ class NoticeStorage {
 
     // Add multiple notices
     async addNotices(notices) {
+        await this.waitForInit();
         let addedCount = 0;
         for (const notice of notices) {
-            if (!this.noticeExists(notice.title, notice.link)) {
+            if (!(await this.noticeExists(notice.title, notice.link))) {
                 const newNotice = {
-                    id: this.data.notices.length + 1,
+                    id: (this.data.notices || []).length + 1,
                     ...notice,
                     created_at: new Date().toISOString()
                 };
@@ -86,18 +112,21 @@ class NoticeStorage {
     }
 
     // Get notice count
-    getNoticeCount() {
-        return this.data.notices.length;
+    async getNoticeCount() {
+        await this.waitForInit();
+        return (this.data.notices || []).length;
     }
 
     // Get last update time
-    getLastUpdateTime() {
+    async getLastUpdateTime() {
+        await this.waitForInit();
         return this.data.lastUpdate;
     }
 
     // Clear all notices
     async clearAllNotices() {
-        const count = this.data.notices.length;
+        await this.waitForInit();
+        const count = (this.data.notices || []).length;
         this.data.notices = [];
         this.data.lastUpdate = null;
         await this.saveData();
@@ -105,10 +134,11 @@ class NoticeStorage {
     }
 
     // Get storage info
-    getStorageInfo() {
+    async getStorageInfo() {
+        await this.waitForInit();
         return {
             file: this.dataFile,
-            noticeCount: this.data.notices.length,
+            noticeCount: (this.data.notices || []).length,
             lastUpdate: this.data.lastUpdate,
             version: this.data.version
         };
@@ -116,6 +146,7 @@ class NoticeStorage {
 
     // Backup data
     async backup() {
+        await this.waitForInit();
         const backupFile = path.join(process.cwd(), `notices_backup_${Date.now()}.json`);
         await fs.writeFile(backupFile, JSON.stringify(this.data, null, 2));
         return backupFile;
